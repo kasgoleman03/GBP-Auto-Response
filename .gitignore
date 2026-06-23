@@ -3,6 +3,7 @@ dist
 dist-ssr
 .next
 .vercel
+drizzle
 *.local
 .env
 .env.*
@@ -10,3 +11,4 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+.env*

@@ -1,8 +1,8 @@
 /**
  * Server-only runtime configuration.
  *
- * Every value is read from `process.env` (NEVER the `VITE_`-prefixed client
- * vars) so secrets are never bundled into the front-end. Defaults are chosen so
+ * Every value is read from `process.env` (NEVER the `NEXT_PUBLIC_`-prefixed
+ * client vars) so secrets are never bundled into the front-end. Defaults are chosen so
  * that with REVIEW_PROVIDER=mock the app runs with NO Postproxy credentials.
  */
 

@@ -1,9 +1,15 @@
 node_modules
-dist
-dist-ssr
 .next
+out
+dist
+build
+
 .vercel
 drizzle
+
+*.tsbuildinfo
+next-env.d.ts
+
 *.local
 .env
 .env.*
@@ -11,4 +17,3 @@ drizzle
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
-.env*

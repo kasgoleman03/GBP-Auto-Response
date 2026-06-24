@@ -13,7 +13,11 @@ import type { Review } from "./types";
 import { ledger } from "./ledger";
 import { notify, type Notification } from "./notifier";
 import { callClaude, parseClaudeJson } from "./anthropic";
-import { loadVoiceConfig, buildVoiceBlock } from "./voice";
+import { loadVoiceConfig, buildVoiceBlock, type VoiceConfig } from "./voice";
+import { serverConfig } from "./config";
+import { signReviewToken } from "./token";
+import * as repo from "./db/repo";
+import type { ActivityType } from "../lib/types";
 
 type Action = "auto_post" | "draft" | "notify";
 
@@ -206,6 +210,58 @@ Drafted reply to evaluate:
   return parseClaudeJson<SelfCheckResult>(raw, "Stage 3 self-check");
 }
 
+/**
+ * Generate a fresh draft reply for a review (analyze → generate). Exposed for
+ * the in-app "Redo" action and the voice preview. Pass `voiceOverride` to
+ * preview an unsaved voice config.
+ */
+export async function generateDraftText(
+  review: Review,
+  voiceOverride?: VoiceConfig
+): Promise<string> {
+  const voice = voiceOverride ?? (await loadVoiceConfig());
+  const voiceBlock = buildVoiceBlock(voice);
+  const analysis = await analyze(review, voiceBlock);
+  const band = ratingBand(review);
+  const generated = await generate(review, analysis, band, voiceBlock);
+  return generated.reply;
+}
+
+/** Build the magic-link approval email payload (links + review + draft). */
+async function buildApprovalEmail(review: Review, draftText: string) {
+  const base = serverConfig.appBaseUrl;
+  let actions: { label: string; url: string }[] | undefined;
+  let openInAppUrl: string | undefined;
+  if (base) {
+    openInAppUrl = `${base}/review/${review.id}`;
+    try {
+      const token = await signReviewToken(review.id);
+      actions = [
+        {
+          label: "Approve & Post",
+          url: `${base}/api/reviews/${review.id}/approve?token=${token}`,
+        },
+        {
+          label: "Redo",
+          url: `${base}/api/reviews/${review.id}/redo?token=${token}`,
+        },
+      ];
+    } catch (err) {
+      console.error(
+        `[pipeline] review=${review.id} could not sign magic-link token: ${errToString(err)}`
+      );
+    }
+  }
+  return {
+    reviewText: review.text,
+    rating: review.rating,
+    reviewerName: review.reviewerName,
+    draft: draftText,
+    actions,
+    openInAppUrl,
+  };
+}
+
 export interface PipelineResult {
   reviewId: string;
   action: Action;
@@ -284,6 +340,31 @@ export async function runPipeline(
 
     const now = new Date().toISOString();
 
+    // Persist the processed review/draft/activity to the DB (best-effort).
+    const persist = async (
+      reviewStatus: Review["status"],
+      draftStatus: "ready" | "posted",
+      editable: boolean,
+      activity: { type: ActivityType; summary: string; detail?: string }
+    ): Promise<void> => {
+      if (!serverConfig.hasDatabase) return;
+      try {
+        await repo.persistProcessedReview({
+          review,
+          draftText: draft,
+          reviewStatus,
+          draftStatus,
+          editable,
+          activity,
+        });
+        console.log(`[pipeline] review=${review.id} persisted to DB (status=${reviewStatus})`);
+      } catch (err) {
+        console.error(
+          `[pipeline] review=${review.id} DB persist failed: ${errToString(err)}`
+        );
+      }
+    };
+
     if (action === "auto_post") {
       // 4. Stage 3 — self-check (Claude, temp 0.0).
       // TODO: pass real recent replies (from the ledger/DB) for near-duplicate detection.
@@ -302,10 +383,16 @@ export async function runPipeline(
       if (!check.ok) {
         // Failed self-check downgrades to human approval — never silently drop.
         ledger.recordReview({ reviewId: review.id, action: "draft", draft, processedAt: now });
+        await persist("needs_review", "ready", true, {
+          type: "notified",
+          summary: `Auto-post blocked by self-check — drafted for approval for ${review.reviewerName} (${review.rating}★)`,
+          detail: draft,
+        });
         await sendNotification({
           kind: "needs_approval",
           reviewId: review.id,
           message: `Auto-post blocked by self-check (${check.issue}); routed for approval.`,
+          email: await buildApprovalEmail(review, draft),
         });
         return { reviewId: review.id, action: "draft", posted: false, deduped: false };
       }
@@ -330,6 +417,11 @@ export async function runPipeline(
       ledger.recordReview({ reviewId: review.id, action, draft, processedAt: now });
 
       if (!result.ok || failed) {
+        await persist("needs_review", "ready", true, {
+          type: "notified",
+          summary: `Auto-post failed for ${review.reviewerName} (${review.rating}★) — needs attention`,
+          detail: draft,
+        });
         await sendNotification({
           kind: "reply_failed",
           reviewId: review.id,
@@ -346,6 +438,11 @@ export async function runPipeline(
         };
       }
 
+      await persist("auto_posted", "posted", false, {
+        type: "auto_posted",
+        summary: `Auto-posted a reply to ${review.reviewerName} (${review.rating}★)`,
+        detail: draft,
+      });
       if (!result.deduped) {
         await sendNotification({
           kind: "auto_posted",
@@ -365,14 +462,29 @@ export async function runPipeline(
 
     // draft / notify: record and alert; the coach acts from the app.
     ledger.recordReview({ reviewId: review.id, action, draft, processedAt: now });
-    await sendNotification({
-      kind: action === "notify" ? "notify_only" : "needs_approval",
-      reviewId: review.id,
-      message:
-        action === "notify"
-          ? "New rating-only review — no reply drafted."
-          : "New review drafted and waiting for your approval.",
-    });
+    if (action === "notify") {
+      await persist("notify_only", "ready", true, {
+        type: "notified",
+        summary: `New ${review.rating}★ rating from ${review.reviewerName} — no reply needed`,
+      });
+      await sendNotification({
+        kind: "notify_only",
+        reviewId: review.id,
+        message: "New rating-only review — no reply drafted.",
+      });
+    } else {
+      await persist("needs_review", "ready", true, {
+        type: "notified",
+        summary: `Drafted a reply for ${review.reviewerName} (${review.rating}★) — waiting for approval`,
+        detail: draft,
+      });
+      await sendNotification({
+        kind: "needs_approval",
+        reviewId: review.id,
+        message: "New review drafted and waiting for your approval.",
+        email: await buildApprovalEmail(review, draft),
+      });
+    }
     console.log(`[pipeline] review=${review.id} done action=${action} posted=false`);
     return { reviewId: review.id, action, posted: false, deduped: false };
   } catch (err) {

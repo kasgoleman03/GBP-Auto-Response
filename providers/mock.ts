@@ -90,4 +90,9 @@ export class MockProvider implements ReviewProvider {
       .filter((r) => !ledger.hasReview(r.id))
       .map((r) => this.normalizeInbound(r));
   }
+
+  /** All sample reviews, ignoring the ledger — used by the DB seed function. */
+  sampleReviews(): Review[] {
+    return sampleRaw().map((r) => this.normalizeInbound(r));
+  }
 }

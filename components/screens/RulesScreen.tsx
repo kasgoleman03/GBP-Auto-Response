@@ -17,7 +17,7 @@ import {
   SlidersIcon,
   TrashIcon,
 } from "@/components/ui/icons";
-import { api } from "@/lib/mockApi";
+import { api } from "@/lib/dataClient";
 import { describeCondition } from "@/lib/rules";
 import { useToast } from "@/components/ui/Toast";
 import { cx } from "@/lib/format";

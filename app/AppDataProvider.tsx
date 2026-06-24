@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api } from "@/lib/mockApi";
+import { api } from "@/lib/dataClient";
 import type { Connection, Draft, Review } from "@/lib/types";
 
 interface AppData {

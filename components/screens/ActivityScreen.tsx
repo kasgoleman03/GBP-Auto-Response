@@ -17,7 +17,7 @@ import {
   ZapIcon,
 } from "@/components/ui/icons";
 import { useAsync } from "@/lib/useAsync";
-import { api } from "@/lib/mockApi";
+import { api } from "@/lib/dataClient";
 import { cx, dayLabel, fullDate, timeAgo } from "@/lib/format";
 import type { ActivityEntry, ActivityType } from "@/lib/types";
 

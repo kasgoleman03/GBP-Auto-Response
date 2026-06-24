@@ -30,6 +30,20 @@ export const serverConfig = {
   /** Optional shared secret Vercel Cron sends as `Authorization: Bearer`. */
   cronSecret: str("CRON_SECRET"),
 
+  /**
+   * Public base URL of this deployment, used to build absolute links in emails
+   * (e.g. the magic-link approve/redo actions). Falls back to VERCEL_URL.
+   */
+  appBaseUrl: (() => {
+    const explicit = str("APP_BASE_URL");
+    if (explicit) return explicit.replace(/\/$/, "");
+    const vercel = str("VERCEL_URL");
+    return vercel ? `https://${vercel}` : "";
+  })(),
+
+  /** Whether a Postgres database is configured (drives the mock/DB fallback). */
+  hasDatabase: !!str("POSTGRES_URL"),
+
   postproxy: {
     /** No hardcoded host in code — overridable, defaults to the public API. */
     baseUrl: str("POSTPROXY_API_BASE_URL", "https://api.postproxy.dev"),

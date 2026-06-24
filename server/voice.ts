@@ -37,13 +37,17 @@ export interface VoiceConfig {
 /** The config-table key the Voice & Brand settings are stored under. */
 export const VOICE_CONFIG_KEY = "voice";
 
-/** Placeholder fallback used when no DB row exists yet. */
-const DEFAULT_VOICE: VoiceConfig = {
-  businessName: "[GYM_NAME]",
+/**
+ * Default voice config. Used as the pipeline fallback when no DB is available
+ * and as the row inserted on first DB access (the user can then edit it in the
+ * Voice screen).
+ */
+export const DEFAULT_VOICE: VoiceConfig = {
+  businessName: "Vanguard Kickboxing & Fitness",
   voiceDescription:
-    "A kickboxing and fitness gym. Warm, energetic, and encouraging — like a coach who knows their members by name.",
-  signOff: "— Coach [COACH_NAME]",
-  allowEmoji: false,
+    "A high-energy kickboxing and fitness gym. Warm, encouraging, and a little gritty — like a coach who knows their members by name and celebrates their wins.",
+  signOff: "— The Vanguard Team",
+  allowEmoji: true,
   useFirstName: true,
   tone: "warm",
   length: "short",

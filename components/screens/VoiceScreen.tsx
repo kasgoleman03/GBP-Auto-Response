@@ -14,7 +14,7 @@ import {
   SparkleIcon,
   XIcon,
 } from "@/components/ui/icons";
-import { api } from "@/lib/mockApi";
+import { api } from "@/lib/dataClient";
 import { useToast } from "@/components/ui/Toast";
 import { cx } from "@/lib/format";
 import type { Review, ReplyLength, VoiceConfig, VoiceTone } from "@/lib/types";

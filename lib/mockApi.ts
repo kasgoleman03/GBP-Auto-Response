@@ -461,5 +461,8 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/** The app imports this. Swap it for a real implementation to go live. */
-export const api: ReplyPilotApi = new MockReplyPilotApi();
+/**
+ * In-memory/localStorage mock. The app no longer imports this directly — it goes
+ * through `lib/dataClient.ts`, which falls back to this when no DB is configured.
+ */
+export const mockApi: ReplyPilotApi = new MockReplyPilotApi();

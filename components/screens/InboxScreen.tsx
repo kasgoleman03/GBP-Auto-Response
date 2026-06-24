@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/icons";
 import { useAppData } from "@/app/AppDataProvider";
 import { useAsync } from "@/lib/useAsync";
-import { api } from "@/lib/mockApi";
+import { api } from "@/lib/dataClient";
 import { cx, timeAgo } from "@/lib/format";
 import { useToast } from "@/components/ui/Toast";
 import type { Review, ReviewStatus } from "@/lib/types";

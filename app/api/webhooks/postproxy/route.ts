@@ -8,8 +8,10 @@ import { verifyPostproxySignature } from "@/server/webhookSignature";
 /**
  * Postproxy webhook receiver — `profile_comment.created`.
  *
- * Runtime: Edge — `Request.text()` gives the exact raw body required for HMAC
- * signature verification, and Web Crypto is available. Steps:
+ * Runtime: Node.js — the pipeline pulls in Node-only modules (via the Anthropic
+ * SDK and DB client), which aren't supported on Edge. `Request.text()` still
+ * gives the exact raw body required for HMAC verification, and Web Crypto is
+ * available on Node 18+. Steps:
  *   1. rate-limit  2. verify X-Postproxy-Signature  3. parse + filter event
  *   4. scope to the configured placement  5. dedup (delivery id + ledger)
  *   6. normalize + run pipeline.
@@ -17,7 +19,7 @@ import { verifyPostproxySignature } from "@/server/webhookSignature";
  * Only acts in INGEST_MODE "webhook" | "both"; in "poll" it acknowledges and
  * ignores so the poll cron remains the single processor.
  */
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 interface ProfileCommentEvent {
   id?: string;

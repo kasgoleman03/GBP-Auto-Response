@@ -27,6 +27,9 @@ interface AppData {
   approveAndPost: (reviewId: string, text?: string) => Promise<void>;
   postOwnReply: (reviewId: string, text: string) => Promise<void>;
   skipReview: (reviewId: string) => Promise<void>;
+  unpostReply: (reviewId: string) => Promise<void>;
+  unskipReview: (reviewId: string) => Promise<void>;
+  reopenReview: (reviewId: string) => Promise<Draft>;
   connectGoogle: (input: {
     businessName: string;
     locationAddress: string;
@@ -121,6 +124,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setReviews((prev) => prev.map((r) => (r.id === review.id ? review : r)));
   }, []);
 
+  const unpostReply = useCallback(
+    async (reviewId: string) => {
+      const result = await api.unpostReply(reviewId);
+      applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const unskipReview = useCallback(async (reviewId: string) => {
+    const review = await api.unskipReview(reviewId);
+    setReviews((prev) => prev.map((r) => (r.id === review.id ? review : r)));
+  }, []);
+
+  const reopenReview = useCallback(
+    async (reviewId: string) => {
+      const result = await api.reopenReview(reviewId);
+      applyResult(result);
+      return result.draft;
+    },
+    [applyResult]
+  );
+
   const connectGoogle = useCallback(
     async (input: {
       businessName: string;
@@ -158,6 +183,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       approveAndPost,
       postOwnReply,
       skipReview,
+      unpostReply,
+      unskipReview,
+      reopenReview,
       connectGoogle,
       disconnect,
     }),
@@ -174,6 +202,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       approveAndPost,
       postOwnReply,
       skipReview,
+      unpostReply,
+      unskipReview,
+      reopenReview,
       connectGoogle,
       disconnect,
     ]

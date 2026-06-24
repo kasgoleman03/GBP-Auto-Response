@@ -380,6 +380,76 @@ class MockReplyPilotApi implements ReplyPilotApi {
     return delay(clone(review), 300);
   }
 
+  async unpostReply(
+    reviewId: string
+  ): Promise<{ review: Review; draft: Draft }> {
+    const review = this.reviews.find((r) => r.id === reviewId);
+    if (!review) throw new Error(`Review ${reviewId} not found`);
+    review.status = "needs_review";
+    let draft = this.drafts.find((d) => d.reviewId === reviewId);
+    if (draft) {
+      draft.status = "ready";
+      draft.editable = true;
+      draft.updatedAt = new Date().toISOString();
+    } else {
+      draft = { reviewId, text: "", status: "ready", editable: true };
+      this.drafts.push(draft);
+    }
+    this.log({
+      type: "reverted",
+      summary: `You undid the reply to ${review.reviewerName} (${review.rating}★)`,
+      reviewId,
+      actor: "you",
+    });
+    this.persist();
+    return delay({ review: clone(review), draft: clone(draft) }, 300);
+  }
+
+  async unskipReview(reviewId: string): Promise<Review> {
+    const review = this.reviews.find((r) => r.id === reviewId);
+    if (!review) throw new Error(`Review ${reviewId} not found`);
+    review.status = "needs_review";
+    this.log({
+      type: "reverted",
+      summary: `You undid skipping ${review.reviewerName} (${review.rating}★)`,
+      reviewId,
+      actor: "you",
+    });
+    this.persist();
+    return delay(clone(review), 300);
+  }
+
+  async reopenReview(
+    reviewId: string
+  ): Promise<{ review: Review; draft: Draft }> {
+    const review = this.reviews.find((r) => r.id === reviewId);
+    if (!review) throw new Error(`Review ${reviewId} not found`);
+    review.status = "needs_review";
+    const text = this.compose(review);
+    let draft = this.drafts.find((d) => d.reviewId === reviewId);
+    const next: Draft = {
+      reviewId,
+      text,
+      status: "ready",
+      editable: true,
+      generatedBy: "ReplyPilot AI",
+      updatedAt: new Date().toISOString(),
+    };
+    if (draft) Object.assign(draft, next);
+    else {
+      draft = next;
+      this.drafts.push(draft);
+    }
+    this.log({
+      type: "reopened",
+      summary: `You reopened ${review.reviewerName} (${review.rating}★) and drafted a fresh reply`,
+      reviewId,
+      actor: "you",
+    });
+    this.persist();
+    return delay({ review: clone(review), draft: clone(draft) }, 700);
+  }
+
   // --- Rules ---------------------------------------------------------
   async listRules(): Promise<Rule[]> {
     this.normalizeRuleOrder();

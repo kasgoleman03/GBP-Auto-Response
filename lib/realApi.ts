@@ -91,6 +91,18 @@ export const realApi: ReplyPilotApi = {
     }),
   skipReview: (reviewId) =>
     jsonFetch<Review>(`/api/reviews/${reviewId}/skip`, { method: "POST" }),
+  unpostReply: (reviewId) =>
+    jsonFetch<{ review: Review; draft: Draft }>(
+      `/api/reviews/${reviewId}/unpost`,
+      { method: "POST" }
+    ),
+  unskipReview: (reviewId) =>
+    jsonFetch<Review>(`/api/reviews/${reviewId}/unskip`, { method: "POST" }),
+  reopenReview: (reviewId) =>
+    jsonFetch<{ review: Review; draft: Draft }>(
+      `/api/reviews/${reviewId}/reopen`,
+      { method: "POST" }
+    ),
 
   // --- Rules ---
   listRules: () => jsonFetch<Rule[]>("/api/rules"),

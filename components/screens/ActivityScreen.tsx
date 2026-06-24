@@ -39,6 +39,8 @@ const META: Record<
   voice_changed: { icon: <SparkleIcon size={16} />, tone: "text-violet-600 bg-violet-50" },
   connected: { icon: <CheckIcon size={16} />, tone: "text-emerald-600 bg-emerald-50" },
   notified: { icon: <BellIcon size={16} />, tone: "text-sky-600 bg-sky-50" },
+  reverted: { icon: <RefreshIcon size={16} />, tone: "text-ink-500 bg-ink-100" },
+  reopened: { icon: <RefreshIcon size={16} />, tone: "text-brand-600 bg-brand-50" },
 };
 
 export function ActivityScreen() {

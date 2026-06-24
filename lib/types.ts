@@ -128,7 +128,9 @@ export type ActivityType =
   | "rule_changed"
   | "voice_changed"
   | "connected"
-  | "notified";
+  | "notified"
+  | "reverted"
+  | "reopened";
 
 export interface ActivityEntry {
   id: string;

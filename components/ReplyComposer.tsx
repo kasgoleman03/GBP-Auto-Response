@@ -34,8 +34,16 @@ export function ReplyComposer({
   autofocusEdit?: boolean;
   onPosted?: () => void;
 }) {
-  const { getDraft, regenerateDraft, approveAndPost, postOwnReply, skipReview } =
-    useAppData();
+  const {
+    getDraft,
+    regenerateDraft,
+    approveAndPost,
+    postOwnReply,
+    skipReview,
+    unpostReply,
+    unskipReview,
+    reopenReview,
+  } = useAppData();
   const toast = useToast();
 
   const [draft, setDraft] = useState<Draft | undefined>();
@@ -43,11 +51,26 @@ export function ReplyComposer({
   const [regenerating, setRegenerating] = useState(false);
   const [posting, setPosting] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  const [reopening, setReopening] = useState(false);
+  const [confirm, setConfirm] = useState<null | "approve" | "skip">(null);
   const [mode, setMode] = useState<Mode>("view");
   const [editText, setEditText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const confirmTimer = useRef<number | undefined>(undefined);
 
   const alreadyHandled = review.status !== "needs_review";
+
+  // Reset the two-step confirm prompt if the user doesn't follow through.
+  const armConfirm = (which: "approve" | "skip") => {
+    setConfirm(which);
+    window.clearTimeout(confirmTimer.current);
+    confirmTimer.current = window.setTimeout(() => setConfirm(null), 4000);
+  };
+  const disarmConfirm = () => {
+    setConfirm(null);
+    window.clearTimeout(confirmTimer.current);
+  };
+  useEffect(() => () => window.clearTimeout(confirmTimer.current), []);
 
   useEffect(() => {
     let active = true;
@@ -87,16 +110,39 @@ export function ReplyComposer({
     }
   }
 
+  /** Toast with a 10-second Undo that retracts a just-posted reply. */
+  function showPostedToast(message: string) {
+    toast.show(message, {
+      tone: "success",
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          await unpostReply(review.id);
+          toast.show("Reply retracted — back in your inbox");
+        },
+      },
+    });
+  }
+
   async function handleApprove() {
+    disarmConfirm();
     setPosting(true);
     try {
       await approveAndPost(review.id, draft?.text);
-      toast.show(`Reply posted to ${review.reviewerName}`, {
-        tone: "success",
-      });
+      showPostedToast(`Reply posted to ${review.reviewerName}`);
       onPosted?.();
     } finally {
       setPosting(false);
+    }
+  }
+
+  // "Approve & Post" is destructive — require a second deliberate tap.
+  function onApproveClick() {
+    if (confirm === "approve") {
+      void handleApprove();
+    } else {
+      armConfirm("approve");
     }
   }
 
@@ -109,9 +155,7 @@ export function ReplyComposer({
     setPosting(true);
     try {
       await postOwnReply(review.id, text);
-      toast.show(`Your reply was posted to ${review.reviewerName}`, {
-        tone: "success",
-      });
+      showPostedToast(`Your reply was posted to ${review.reviewerName}`);
       onPosted?.();
     } finally {
       setPosting(false);
@@ -119,13 +163,45 @@ export function ReplyComposer({
   }
 
   async function handleSkip() {
+    disarmConfirm();
     setSkipping(true);
     try {
       await skipReview(review.id);
-      toast.show("Review skipped — no reply will be posted");
+      toast.show("Review skipped — no reply will be posted", {
+        duration: 10000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await unskipReview(review.id);
+            toast.show("Skip undone — back in your inbox");
+          },
+        },
+      });
       onPosted?.();
     } finally {
       setSkipping(false);
+    }
+  }
+
+  // "Skip" is destructive — require a second deliberate tap.
+  function onSkipClick() {
+    if (confirm === "skip") {
+      void handleSkip();
+    } else {
+      armConfirm("skip");
+    }
+  }
+
+  async function handleReopen() {
+    setReopening(true);
+    try {
+      const next = await reopenReview(review.id);
+      setDraft(next);
+      setEditText(next.text);
+      setMode("view");
+      toast.show("Reopened — a fresh draft is ready", { tone: "success" });
+    } finally {
+      setReopening(false);
     }
   }
 
@@ -156,6 +232,19 @@ export function ReplyComposer({
             You chose not to reply to this review.
           </p>
         )}
+
+        {/* No dead ends: a handled review can always be reopened + re-drafted. */}
+        <div className="mt-3 border-t border-ink-200/70 pt-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            iconLeft={<RefreshIcon size={16} />}
+            onClick={handleReopen}
+            loading={reopening}
+          >
+            {review.status === "skipped" ? "Reopen & draft a reply" : "Draft again"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -238,11 +327,12 @@ export function ReplyComposer({
             size={compact ? "md" : "lg"}
             variant="success"
             iconLeft={<CheckIcon size={20} />}
-            onClick={handleApprove}
+            onClick={onApproveClick}
             loading={posting}
             disabled={busy && !posting}
+            className={cx(confirm === "approve" && "ring-2 ring-emerald-300")}
           >
-            Approve &amp; Post
+            {confirm === "approve" ? "Tap again to confirm" : "Approve & Post"}
           </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -302,15 +392,24 @@ export function ReplyComposer({
         </div>
       )}
 
-      {/* Skip */}
+      {/* Skip (two-step confirm — destructive) */}
       {!loadingDraft && (
         <div className="mt-3 flex items-center justify-center">
           <button
-            onClick={handleSkip}
+            onClick={onSkipClick}
             disabled={busy}
-            className="text-xs font-medium text-ink-400 underline-offset-2 hover:text-ink-600 hover:underline disabled:opacity-50"
+            className={cx(
+              "text-xs font-medium underline-offset-2 hover:underline disabled:opacity-50",
+              confirm === "skip"
+                ? "font-semibold text-red-600"
+                : "text-ink-400 hover:text-ink-600"
+            )}
           >
-            {skipping ? "Skipping…" : "Skip — don't reply"}
+            {skipping
+              ? "Skipping…"
+              : confirm === "skip"
+                ? "Tap again to confirm skip"
+                : "Skip — don't reply"}
           </button>
         </div>
       )}

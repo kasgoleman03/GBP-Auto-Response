@@ -32,6 +32,53 @@
   color-scheme: light;
 }
 
+/*
+ * Dark mode. We reuse the SAME design tokens — no new color names — by giving
+ * the existing CSS variables dark-mode values:
+ *  - the neutral `ink` ramp is inverted (so bg-ink-50/text-ink-900 still read
+ *    correctly),
+ *  - `--color-white` becomes a dark elevated surface (so every `bg-white`
+ *    card/header/secondary-button themes automatically, including /alpha and
+ *    gradient variants),
+ *  - the `brand` tints are darkened and their text shades lifted,
+ *  - white text that sits on colored buttons/badges is kept light.
+ * Accent chips (emerald/amber/sky/violet/red) intentionally stay as bright
+ * callouts and remain readable on the dark surfaces.
+ */
+html.dark {
+  color-scheme: dark;
+
+  /* Neutral ramp — inverted. */
+  --color-ink-50: #0f1219;
+  --color-ink-100: #222836;
+  --color-ink-200: #2f3746;
+  --color-ink-300: #414a5c;
+  --color-ink-400: #8c97a9;
+  --color-ink-500: #a7b1c1;
+  --color-ink-600: #c0c8d4;
+  --color-ink-700: #d7dce4;
+  --color-ink-800: #e9ecf1;
+  --color-ink-900: #f6f7f9;
+  --color-ink-950: #ffffff;
+
+  /* Elevated surfaces that were pure white. */
+  --color-white: #181d28;
+
+  /* Brand tints darkened; brand text shades lifted for contrast on dark. */
+  --color-brand-50: #14203c;
+  --color-brand-100: #1a294c;
+  --color-brand-200: #26396b;
+  --color-brand-600: #4f7dff;
+  --color-brand-700: #7ba0ff;
+  --color-brand-800: #a6c0ff;
+  --color-brand-900: #c9d8ff;
+}
+
+/* Keep text that sits on colored buttons/badges/avatars legible (white). */
+html.dark .text-white {
+  color: #f8fafc;
+}
+
 html,
 body,
 #root {

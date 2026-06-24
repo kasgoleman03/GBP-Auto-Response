@@ -23,8 +23,29 @@ export function ruleMatches(rule: Rule, review: Review): boolean {
 }
 
 /**
+ * Hard safety override: a 1–2 star review must NEVER be auto-posted, regardless
+ * of any user rule. Applied after rule resolution to downgrade auto_post to a
+ * human-approved draft. Returns the (possibly downgraded) action.
+ */
+export function applyNegativeReviewSafety(
+  review: Review,
+  action: RuleAction
+): RuleAction {
+  if (action === "auto_post" && review.rating <= 2) {
+    console.warn(
+      `[safety] forced negative review ${review.id} from auto_post to approval`
+    );
+    return "draft";
+  }
+  return action;
+}
+
+/**
  * The first enabled rule that matches wins (rules are evaluated top-to-bottom).
  * Returns `undefined` when nothing matches (the UI treats that as "draft").
+ *
+ * A final unconditional safety override downgrades auto_post to draft for any
+ * 1–2 star review — no user rule can ever auto-post a negative review.
  */
 export function resolveAction(
   rules: Rule[],
@@ -32,7 +53,9 @@ export function resolveAction(
 ): { rule: Rule; action: RuleAction } | undefined {
   for (const rule of rules) {
     if (!rule.enabled) continue;
-    if (ruleMatches(rule, review)) return { rule, action: rule.action };
+    if (ruleMatches(rule, review)) {
+      return { rule, action: applyNegativeReviewSafety(review, rule.action) };
+    }
   }
   return undefined;
 }

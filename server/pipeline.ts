@@ -146,16 +146,35 @@ async function analyze(
 /** rules: graduated autonomy. Negative/sensitive reviews always go to a human. */
 function decide(review: Review, analysis: AnalyzeResult): Action {
   const starOnly = !review.hasText;
+  let action: Action;
   if (
     analysis.requires_human ||
     analysis.sentiment === "negative" ||
     review.rating <= 2
   ) {
+    action = "draft";
+  } else if (starOnly) {
+    action = "notify";
+  } else if (review.rating === 5 && review.wordCount <= 15) {
+    action = "auto_post";
+  } else {
+    action = "draft";
+  }
+  return applyNegativeReviewSafety(review, action);
+}
+
+/**
+ * Hard safety override: a 1–2 star review can NEVER be auto-posted, no matter
+ * what any rule resolves to. This is the last word after rule evaluation.
+ */
+function applyNegativeReviewSafety(review: Review, action: Action): Action {
+  if (action === "auto_post" && review.rating <= 2) {
+    console.warn(
+      `[safety] forced negative review ${review.id} from auto_post to approval`
+    );
     return "draft";
   }
-  if (starOnly) return "notify";
-  if (review.rating === 5 && review.wordCount <= 15) return "auto_post";
-  return "draft";
+  return action;
 }
 
 /** Stage 2 — generate an on-brand draft reply via Claude. Temperature 0.6. */

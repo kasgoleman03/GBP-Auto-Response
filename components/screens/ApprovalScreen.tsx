@@ -14,6 +14,7 @@ import {
   ChevronRightIcon,
   ShieldIcon,
 } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppData } from "@/app/AppDataProvider";
 import { useAsync } from "@/lib/useAsync";
 import { api } from "@/lib/dataClient";
@@ -107,29 +108,32 @@ export function ApprovalScreen() {
             <ArrowLeftIcon size={18} />
             Inbox
           </button>
-          {queueIndex >= 0 && pendingQueue.length > 1 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-ink-400">
-                {queueIndex + 1} of {pendingQueue.length} pending
-              </span>
-              <button
-                disabled={!prev}
-                onClick={() => prev && router.push(`/review/${prev.id}`)}
-                className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 disabled:opacity-30"
-                aria-label="Previous review"
-              >
-                <ChevronLeftIcon size={18} />
-              </button>
-              <button
-                disabled={!next}
-                onClick={() => next && router.push(`/review/${next.id}`)}
-                className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 disabled:opacity-30"
-                aria-label="Next review"
-              >
-                <ChevronRightIcon size={18} />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            {queueIndex >= 0 && pendingQueue.length > 1 && (
+              <>
+                <span className="text-xs font-medium text-ink-400">
+                  {queueIndex + 1} of {pendingQueue.length} pending
+                </span>
+                <button
+                  disabled={!prev}
+                  onClick={() => prev && router.push(`/review/${prev.id}`)}
+                  className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 disabled:opacity-30"
+                  aria-label="Previous review"
+                >
+                  <ChevronLeftIcon size={18} />
+                </button>
+                <button
+                  disabled={!next}
+                  onClick={() => next && router.push(`/review/${next.id}`)}
+                  className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 disabled:opacity-30"
+                  aria-label="Next review"
+                >
+                  <ChevronRightIcon size={18} />
+                </button>
+              </>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

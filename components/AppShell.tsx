@@ -12,6 +12,7 @@ import {
   ListIcon,
 } from "@/components/ui/icons";
 import { config } from "@/lib/config";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface NavItem {
   to: string;
@@ -44,7 +45,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-full lg:flex">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ink-200/70 bg-white px-4 py-6 lg:flex">
-        <Brand />
+        <div className="flex items-center justify-between gap-2">
+          <Brand />
+          <ThemeToggle />
+        </div>
         <nav className="mt-8 flex flex-col gap-1">
           {items.map((item) => (
             <SidebarLink key={item.to} item={item} active={pathname === item.to} />
@@ -70,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-200/70 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
           <Brand compact />
+          <ThemeToggle />
         </header>
 
         <main key={pathname} className="flex-1 pb-24 lg:pb-10">

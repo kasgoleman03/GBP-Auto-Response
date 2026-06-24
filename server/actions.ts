@@ -30,6 +30,34 @@ export async function regenerateAndSave(reviewId: string): Promise<Draft> {
   return draft;
 }
 
+/**
+ * Reopen a skipped/replied review (no dead ends): return it to needs_review and
+ * generate a fresh draft via the pipeline's generate step.
+ */
+export async function reopenReview(
+  reviewId: string
+): Promise<{ review: Review; draft: Draft }> {
+  const server = await repo.getServerReview(reviewId);
+  if (!server) throw new Error(`Review ${reviewId} not found`);
+
+  const text = await generateDraftText(server);
+  const draft = await repo.upsertDraft({
+    reviewId,
+    text,
+    status: "ready",
+    editable: true,
+    generatedBy: "ReplyPilot AI",
+  });
+  const review = await repo.setReviewStatus(reviewId, "needs_review");
+  await repo.logActivity({
+    type: "reopened",
+    summary: `Reopened ${review.reviewerName} (${review.rating}★) and drafted a fresh reply`,
+    reviewId,
+    actor: "you",
+  });
+  return { review, draft };
+}
+
 /** Generate a sample reply for an unsaved voice config (Voice screen preview). */
 export async function previewReply(
   config: VoiceConfig,

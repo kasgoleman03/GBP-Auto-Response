@@ -61,6 +61,9 @@ export const api: ReplyPilotApi = {
     (await getImpl()).postOwnReply(reviewId, text),
   saveDraft: async (reviewId, text) => (await getImpl()).saveDraft(reviewId, text),
   skipReview: async (reviewId) => (await getImpl()).skipReview(reviewId),
+  unpostReply: async (reviewId) => (await getImpl()).unpostReply(reviewId),
+  unskipReview: async (reviewId) => (await getImpl()).unskipReview(reviewId),
+  reopenReview: async (reviewId) => (await getImpl()).reopenReview(reviewId),
 
   listRules: async () => (await getImpl()).listRules(),
   saveRule: async (rule) => (await getImpl()).saveRule(rule),

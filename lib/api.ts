@@ -49,6 +49,12 @@ export interface ReplyPilotApi {
   saveDraft(reviewId: string, text: string): Promise<Draft>;
   /** Dismiss a review without replying. */
   skipReview(reviewId: string): Promise<Review>;
+  /** Undo a posted reply (undo window): return the review to needs_review. */
+  unpostReply(reviewId: string): Promise<{ review: Review; draft: Draft }>;
+  /** Undo a skip (undo window): return the review to needs_review. */
+  unskipReview(reviewId: string): Promise<Review>;
+  /** Reopen a skipped/replied review and generate a fresh draft. */
+  reopenReview(reviewId: string): Promise<{ review: Review; draft: Draft }>;
 
   // --- Rules ---------------------------------------------------------
   listRules(): Promise<Rule[]>;

@@ -382,7 +382,7 @@ export async function saveDraft(reviewId: string, text: string): Promise<Draft> 
   return upsertDraft({ reviewId, text, status: "edited", editable: true });
 }
 
-async function setReviewStatus(
+export async function setReviewStatus(
   reviewId: string,
   status: ReviewStatus
 ): Promise<Review> {
@@ -454,6 +454,45 @@ export async function skipReview(reviewId: string): Promise<Review> {
   await logActivity({
     type: "skipped",
     summary: `Skipped a reply to ${review.reviewerName} (${review.rating}★)`,
+    reviewId,
+    actor: "you",
+  });
+  return review;
+}
+
+/**
+ * Undo a posted/auto-posted reply (within the undo window): return the review to
+ * needs_review and make its draft editable again. Note: a real Google Business
+ * Profile integration would also retract the published reply via the provider;
+ * the mock provider treats this as a local state revert.
+ */
+export async function unpost(
+  reviewId: string
+): Promise<{ review: Review; draft: Draft }> {
+  const review = await setReviewStatus(reviewId, "needs_review");
+  const existing = await getDraft(reviewId);
+  const draft = await upsertDraft({
+    reviewId,
+    text: existing?.text ?? "",
+    status: "ready",
+    editable: true,
+    generatedBy: existing?.generatedBy,
+  });
+  await logActivity({
+    type: "reverted",
+    summary: `Undid the reply to ${review.reviewerName} (${review.rating}★)`,
+    reviewId,
+    actor: "you",
+  });
+  return { review, draft };
+}
+
+/** Undo a skip (within the undo window): return the review to needs_review. */
+export async function unskipReview(reviewId: string): Promise<Review> {
+  const review = await setReviewStatus(reviewId, "needs_review");
+  await logActivity({
+    type: "reverted",
+    summary: `Undid skipping ${review.reviewerName} (${review.rating}★)`,
     reviewId,
     actor: "you",
   });
